@@ -8,29 +8,37 @@
     '$window', '$postMessage', '$rootScope',
     function($window, $postMessage, $rootScope) {
 
-      $rootScope.$on('$messageOutgoing', function(event, message, domain) {
-        var sender;
-        if (domain == null) {
+      $rootScope.$on('$messageOutgoing', function(event, message, domain, sender) {
+        if (!domain) {
           domain = "*";
         }
-        sender = $rootScope.sender || $window.parent;
+
+        if(!sender) {
+          sender = $rootScope.sender || $window.parent;
+        }
+
         return sender.postMessage(message, domain);
       });
 
       angular.element($window).bind('message', function(event) {
-        var error, response;
+        var response;
+
         event = event.originalEvent || event;
+
         if (event && event.data) {
           response = null;
           $rootScope.sender = event.source;
+
           try {
             response = angular.fromJson(event.data);
           } catch (_error) {
             response = {};
             response.text = event.data;
           }
+
           response.origin = event.origin;
           $rootScope.$root.$broadcast('$messageIncoming', response);
+
           return $postMessage.messages(response);
         }
       });
@@ -48,16 +56,14 @@
             $messages.push(_message_);
             $rootScope.$digest();
           }
+          
           return $messages;
         },
         lastMessage: function() {
           return $messages[$messages.length - 1];
         },
-        post: function(message, domain) {
-          if (!domain) {
-            domain = "*";
-          }
-          return $rootScope.$broadcast('$messageOutgoing', message, domain);
+        post: function(message, domain, sender) {
+          return $rootScope.$broadcast('$messageOutgoing', message, domain, sender);
         }
       };
       return api;
